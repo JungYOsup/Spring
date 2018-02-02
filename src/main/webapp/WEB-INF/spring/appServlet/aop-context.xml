@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+	<bean id="logAop" class="com.hk.answerboard.aop.LogExecute"/>
+	
+	
+	<aop:config>
+		
+		<!-- com.hk.answerboard.daos.AnswerDao경로안에 있는 모든 메서드가 실행됬을때 기능을 실행하겠다.  -->
+		<aop:pointcut expression="execution(* com.hk.answerboard.daos.AnswerDao.*(..))" id="daoLogPoint"/>
+		
+		<!--ref는 위에 id가 logAop인것을 참조한다  -->
+		<aop:aspect id="logAop" ref="logAop">
+		
+			<!--pointcut-ref가 참조하는 id의 경로에 메소드가 실행되기전에 before 메서드 기능을 실행시켜주겟다.  -->
+			<aop:before method="before" pointcut-ref="daoLogPoint"/>
+			<!--pointcut-ref가 참조하는 id의 경로에 메소드 리턴이 있을때 afterReturning메서드가 실행되곘다  -->
+			<aop:after-returning method="afterReturning" pointcut-ref="daoLogPoint"/>			
+			<!--pointcut-ref가 참조하는 id의 경로에 메소드에서 예외가 있을때 daoError메서드를 실행시켜주겠다. -->
+			<aop:after-throwing method="daoError" pointcut-ref="daoLogPoint"/>
+		
+		</aop:aspect>
+		
+		
+	
+	</aop:config>
+	
+	
+</beans>

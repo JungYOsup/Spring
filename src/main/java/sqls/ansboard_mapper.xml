@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="com.hk.ansboard">
+
+<!--결과 타입이 List가 아니라 Dto자나 !! -->
+	<!--글목록 조회: select 문 -->
+	<select id="boardlist" resultType="AnswerDto">
+
+		SELECT SEQ,ID,TITLE,CONTENT,REGDATE,REFER,STEP,DEPTH,READCOUNT,DELFLAG FROM
+		ANSWERBOARD ORDER BY REFER DESC,STEP ASC
+
+	</select>
+
+	<!--글쓰기 : insert문 -->
+	<insert id="insertboard" parameterType="AnswerDto">
+
+		INSERT INTO ANSWERBOARD "
+		+(SEQ,ID,TITLE,CONTENT,REGDATE,REFER,STEP,DEPTH,READCOUNT,DELFLAG) "
+		+ " VALUES
+		(ANSWERBOARD_SEQ.NEXTVAL,#{id},#{title},#{content},SYSDATE,(SELECT
+		NVL(MAX(REFER)+1,0) FROM ANSWERBOARD),"
+		+ " #{refer},#{step},#{readCount},'N')
+
+	</insert>
+	
+	<!--글 상세보기+글목록보기 : select문 -->
+	<select id="testboard" parameterType="Map" resultType="AnswerDto">
+
+		SELECT SEQ,ID,TITLE,CONTENT,REFER,STEP,DEPTH,READCOUNT,DELFLAG FROM
+		ANSWERBOARD 
+		<!-- WHERE SEQ =#{seq} 가 밑에 형태처럼 바꿀수 있다.-->
+		<if test="seq!=null"> <!--조건의 유효처리를 해준다. 만약 seq가 있으면 그 seq의 글을 상세보기하고 아니면 상세보기 하지 못하게 즉 글 목록조회와 글 상세보기를 합친거 -->
+			<where> <!--쿼리의 WHERE와 같음 -->
+				<include refid="paramseq" />	<!--SEQ=#{seq}-->
+			</where>
+		</if>
+		ORDER BY REFER DESC,STEP ASC
+	</select>
+		<sql id="paramseq"> <!--반복되는 코드를 줄이기 위해 이런식으로 아이디를 주고, include로 불러와 사용하게한다.  -->
+			SEQ=#{seq}
+		</sql>
+	
+	<!--글 상세보기  -->
+	<select id="detailboard" parameterType="int" resultType="AnswerDto">
+		SELECT SEQ,ID,TITLE,CONTENT,REFER,STEP,DEPTH,READCOUNT,DELFLAG FROM
+		ANSWERBOARD WHERE SEQ =#{seq}
+	</select>
+	
+	<!-- 글조회수 : update문 -->
+
+	<update id="updatecount" parameterType="int">
+		UPDATE ANSWERBOARD SET READCOUNT=READCOUNT+1 WHERE SEQ = #{seq}
+	</update>
+
+	<!-- 글 수정하기 : update문 -->
+
+	<update id="updateboard" parameterType="AnswerDto">
+
+		UPDATE ANSWERBOARD SET TITLE=#{title} , CONTENT=#{content} , REGDATE=SYSDATE
+		WHERE SEQ =#{seq}
+
+	</update>
+
+	<!-- 글 삭제하기(여러개) : update문 동적쿼리 사용할때는 파라미터를 Map으로 전달해야함 -->
+	<update id="muldelboard" parameterType="Map">
+		UPDATE ANSWERBOARD SET DELFLAG='Y' WHERE SEQ IN <!--IN(2,3,4,5)은 쿼리를 SEQ=2로 실행 또는 SEQ=3로실행, SEQ=4로실행, SEQ=5로실행 을 하게끔한다.
+														그래서 이 ()의 형태를 만들어 주기위해서 밑에 <foreach>로 반복및형태를 만들어준다.-->
+
+		<!--collection은 받은 배열의 키, <foreach>는 받은 키의 value의 길이만큼 반복한다. item=받은value 
+			, open=(처음시작을 "(" 로 하고) close=(닫을때는 ")"로 닫겠다) , 그리고 분리는 , 로 시키겠다. -->
+		<foreach collection="seqs" item="seq" open="(" close=")"
+			separator=",">
+			#{seq}
+
+		</foreach>
+
+		<!--우리가 IN쿼리를 사용하기 위해서 IN()이런형태를 만들어줘야한는데 IN뒤에 ()를 foreach로써 만들어준다 -->
+	</update>
+	
+	<!--답글달기  -->
+	<update id="ansupdate" parameterType="AnswerDto">
+	
+				UPDATE ANSWERBOARD SET STEP=STEP+1
+				WHERE REFER = (SELECT REFER FROM ANSWERBOARD WHERE SEQ=#{seq}) AND
+				STEP > ( SELECT STEP FROM ANSWERBOARD WHERE SEQ=#{seq} )
+	
+	</update>
+	
+	<insert id="ansinsert" parameterType="AnswerDto">
+	
+				INSERT INTO ANSWERBOARD VALUES(
+				ANSWERBOARD_SEQ.NEXTVAL,#{id},#{title},#{content},SYSDATE,
+				(SELECT REFER FROM ANSWERBOARD WHERE SEQ=#{seq}),
+				(SELECT STEP FROM ANSWERBOARD WHERE SEQ=#{seq})+1,
+				(SELECT DEPTH FROM ANSWERBOARD WHERE SEQ=#{seq})+1,
+				 0,'N')
+		
+	</insert>
+	
+	<!-- ajax처리 -->
+	
+	<select id="detailAjax" resultType="AnswerDto" parameterType="int">
+    SELECT SEQ,ID,TITLE,CONTENT,REFER,STEP,DEPTH,READCOUNT,DELFLAG FROM ANSWERBOARD WHERE SEQ=#{SEQ}
+    </select>
+
+
+
+
+
+</mapper>
